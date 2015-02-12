@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block body %}
+<script type="text/javascript"
+	src="https://code.jquery.com/jquery-2.1.3.min.js">
+</script>
+<script type="text/javascript">
+  $(function() {
+    $("#editing").hide();
+    $("#mybutton").click(function() {
+      $("#viewing").hide();
+      $("#editing").show();
+    });
+    $(".home").click(function() {
+      window.location = "/";
+    });
+  });
+</script>
+<h1>{{ session.title }}</h1>
+<div id="viewing">
+  <div>
+  {{ session.text }}
+  </div>
+  <div>
+    <button id="mybutton">Edit</button>
+    <button class="home">Back</button>
+  </div>
+</div>
+<div id="editing">
+  <form action="/doc/{{ session.docnum }}" method="post">
+    <textarea name="text" cols=100 rows=8>{{ session.text }}</textarea>
+    <br/>
+    <input type="submit" value="Update doc"/>
+    <button class="home">Back</button>
+  </form>
+</div>
+{% endblock %}

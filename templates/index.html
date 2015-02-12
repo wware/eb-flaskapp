@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block body %}
+  <h1>Main page</h1>
+  <div>
+    Here is stuff that anybody is allowed to read. The documents
+    below are only readable to people who log in.
+  </div>
+  <div>
+  {% if not session.user_id %}
+    <a href="{{ url_for('login') }}">Log in</a>
+    to access documents.
+  {% else %}
+    <a href="/doc/1">Document 1</a><br/>
+    <a href="/doc/2">Document 2</a><br/>
+    <a href="{{ url_for('logout') }}">log out</a>
+  {% endif %}
+  </div>
+{% endblock %}
