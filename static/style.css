@@ -1,1 +1,23 @@
-div { padding: 10px; }
+p {
+    padding: 10px 0px 0px 0px;
+}
+
+.scary {
+    background-color: #fcc;
+}
+
+.wider {
+    width: 300px;
+}
+
+.open {
+    display: block;
+}
+
+.closed {
+    display: none;
+}
+
+.fullwidth {
+    width: 100%;
+}

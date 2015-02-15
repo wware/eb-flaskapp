@@ -1,6 +1,12 @@
 <!doctype html>
+<html>
+<head>
+<link rel=stylesheet type=text/css href="{{ url_for('static',
+					 filename='style.css') }}">
+{% block headextra %}{% endblock %}
+</head>
+<body {% block bodyextra %}{% endblock %}>
 <title>Flaskr</title>
-<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
 <div class=page>
   {% block body %}{% endblock %}
   <div class=metanav>
@@ -12,3 +18,5 @@
     <div class=flash>{{ message }}</div>
   {% endfor %}
 </div>
+</body>
+</html>

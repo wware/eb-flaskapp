@@ -110,6 +110,11 @@ def doc(docnum):
         return render_template('doc.html')
 
 
+@application.route("/tinker")
+def tinker():
+    return render_template('tinker.html')
+
+
 @application.route("/login", methods=["GET", "POST"])
 def login():
     logger.info("enter login")
