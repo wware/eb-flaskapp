@@ -51,6 +51,11 @@ login_manager = LoginManager()
 login_manager.init_app(application)
 login_manager.login_view = "login"
 
+if len(sys.argv) > 1:
+    port = int(sys.argv[1], 10)
+else:
+    port = 5000    # Flask's default port number
+
 
 class Doc(Base):
     """
@@ -134,4 +139,4 @@ if __name__ == "__main__":
     if 'init' in sys.argv[1:]:
         Base.metadata.create_all(bind=engine)
         raise SystemExit
-    application.run(host="0.0.0.0", debug=True)
+    application.run(host="0.0.0.0", port=port, debug=True)
