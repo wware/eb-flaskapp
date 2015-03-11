@@ -1,0 +1,108 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - dev_vpc_info
+  vars:
+    region: us-east-1
+    key: aws-key-pair-2015-03-09
+    instance_type: t2.micro
+    # Ubuntu
+    client_image: ami-baa28fd2
+    worker_image: ami-2ca78a44
+    nat_image: ami-184dc970
+    prefix: dev
+  tasks:
+    - name: create rqclient instance
+      local_action:
+        module: ec2
+        group: clients
+        region: "{{ region }}"
+        key_name: "{{ key }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ client_image }}"
+        wait: yes
+        group: "{{ prefix }}_sg_rqclient"
+        exact_count: 1
+        count_tag: foo
+        vpc_subnet_id: "{{ dev_subnet_public }}"
+      register: clients
+
+    # THIS IS NOT IDEMPOTENT, and EIPs are a scarce resource.
+    # https://github.com/ansible/ansible-modules-core/issues/35
+    # https://github.com/ansible/ansible-modules-core/pull/300
+    - name: associate new EIP for the client instance
+      local_action:
+        module: ec2_eip
+        instance_id: "{{ item }}"
+        region: "{{ region }}"
+        in_vpc: yes
+      with_items: clients.instance_ids
+
+    - name: create NAT instance
+      local_action:
+        module: ec2
+        group: nat
+        region: "{{ region }}"
+        key_name: "{{ key }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ nat_image }}"
+        wait: yes
+        group: "{{ prefix }}_sg_nat"
+        source_dest_check: False
+        exact_count: 1
+        count_tag: baz
+        vpc_subnet_id: "{{ dev_subnet_public }}"
+      register: nat
+
+    # THIS IS NOT IDEMPOTENT, and EIPs are a scarce resource.
+    # https://github.com/ansible/ansible-modules-core/issues/35
+    # https://github.com/ansible/ansible-modules-core/pull/300
+    - name: associate new EIP for the NAT instance
+      local_action:
+        module: ec2_eip
+        instance_id: "{{ item }}"
+        region: "{{ region }}"
+        in_vpc: yes
+      with_items: nat.instance_ids
+
+    - name: update vpc
+      local_action:
+        module: ec2_vpc
+        region: "{{ region }}"
+        cidr_block: 10.0.0.0/16
+        resource_tags: '{"Name":"{{ prefix }}_vpc"}'
+        subnets:
+          - cidr: 10.0.0.0/24
+            resource_tags: '{"Name":"{{ prefix }}_subnet_public"}'
+          - cidr: 10.0.1.0/24
+            resource_tags: '{"Name":"{{ prefix }}_subnet_private"}'
+        internet_gateway: yes
+        route_tables:
+          - subnets:
+              - 10.0.0.0/24
+            routes:
+              - dest: 0.0.0.0/0
+                gw: igw
+          - subnets:
+              - 10.0.1.0/24
+            routes:
+              - dest: 0.0.0.0/0
+                gw: "{{ item }}"
+      with_items: nat.instance_ids
+
+    - name: worker provisioning
+      local_action:
+        module: ec2
+        group: workers
+        region: "{{ region }}"
+        key_name: "{{ key }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ worker_image }}"
+        wait: yes
+        group: "{{ prefix }}_sg_worker"
+        exact_count: 1
+        count_tag: bar
+        vpc_subnet_id: "{{ dev_subnet_private }}"
+      register: workers

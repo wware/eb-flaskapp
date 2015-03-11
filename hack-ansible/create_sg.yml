@@ -1,0 +1,98 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - dev_vpc_info
+  vars:
+    region: us-east-1
+    prefix: dev
+    vpc_id: "{{ dev_vpc }}"
+  tasks:
+    - name: create security group for RQ client
+      ec2_group:
+        region: "{{ region }}"
+        vpc_id: "{{ vpc_id }}"
+        name: "{{ prefix }}_sg_rqclient"
+        description: security group for rq client
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: "0.0.0.0/0"
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+    - name: create empty security group for workers
+      ec2_group:
+        region: "{{ region }}"
+        vpc_id: "{{ vpc_id }}"
+        name: "{{ prefix }}_sg_worker"
+        description: security group for workers
+        rules:
+          - proto: all
+            group_name: "{{ prefix }}_sg_rqclient"
+        rules_egress:
+          - proto: all
+            cidr_ip: 0.0.0.0/0
+    - name: modify RQ client SG to avoid forward reference to worker SG
+      ec2_group:
+        region: "{{ region }}"
+        vpc_id: "{{ vpc_id }}"
+        name: "{{ prefix }}_sg_rqclient"
+        description: security group for rq client
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: "0.0.0.0/0"
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            group_name: "{{ prefix }}_sg_worker"
+          - proto: tcp
+            from_port: 6379
+            to_port: 6379
+            group_name: "{{ prefix }}_sg_worker"
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
+    - name: create security group for NAT client
+      ec2_group:
+        region: "{{ region }}"
+        vpc_id: "{{ vpc_id }}"
+        name: "{{ prefix }}_sg_nat"
+        description: security group for NAT instance
+        rules:
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            group_name: "{{ prefix }}_sg_worker"
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            group_name: "{{ prefix }}_sg_worker"
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: "0.0.0.0/0"
+        rules_egress:
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
